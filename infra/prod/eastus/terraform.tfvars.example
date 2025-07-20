@@ -1,0 +1,8 @@
+# Example terraform.tfvars for East US (Primary Region)
+# Copy this file to terraform.tfvars and update with your values
+
+region                = "eastus"
+resource_group_name   = "rg-databricks-prod-eastus"
+owner                 = "platform-team"
+cost_center          = "engineering"
+databricks_sku       = "premium"

@@ -1,0 +1,8 @@
+# Example terraform.tfvars for West US (DR Region)
+# Copy this file to terraform.tfvars and update with your values
+
+region                = "westus"
+resource_group_name   = "rg-databricks-prod-westus"
+owner                 = "platform-team"
+cost_center          = "engineering"
+databricks_sku       = "premium"

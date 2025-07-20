@@ -44,12 +44,40 @@ resource "azurerm_network_security_group" "public" {
   name                = "${var.prefix}-nsg-public"
   location            = var.location
   resource_group_name = var.resource_group_name
+  tags                = var.tags
+
+  # Allow Databricks control plane communication
+  security_rule {
+    name                       = "AllowDatabricksControlPlane"
+    priority                   = 200
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_range     = "443"
+    source_address_prefix      = "AzureDatabricks"
+    destination_address_prefix = "*"
+  }
 }
 
 resource "azurerm_network_security_group" "private" {
   name                = "${var.prefix}-nsg-private"
   location            = var.location
   resource_group_name = var.resource_group_name
+  tags                = var.tags
+
+  # Allow internal communication between subnets
+  security_rule {
+    name                       = "AllowInternalCommunication"
+    priority                   = 200
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "*"
+    source_port_range          = "*"
+    destination_port_range     = "*"
+    source_address_prefix      = "10.0.0.0/16"
+    destination_address_prefix = "10.0.0.0/16"
+  }
 }
 
 resource "azurerm_subnet_network_security_group_association" "public" {

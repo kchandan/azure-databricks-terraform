@@ -48,3 +48,13 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "databricks_sku" {
+  description = "Databricks workspace SKU"
+  type        = string
+  default     = "premium"
+  validation {
+    condition     = contains(["standard", "premium", "trial"], var.databricks_sku)
+    error_message = "SKU must be one of: standard, premium, trial."
+  }
+}

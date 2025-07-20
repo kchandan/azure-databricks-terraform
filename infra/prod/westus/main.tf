@@ -1,57 +1,82 @@
-variable "region" {
-  type = string
-}
-
-variable "resource_group_name" {
-  type = string
-}
-
-resource "random_string" "naming" {
-  special = false
-  upper   = false
-  length  = 6
-}
-
+# Data sources
 data "azurerm_client_config" "current" {}
 
-data "external" "me" {
-  program = ["az", "account", "show", "--query", "user"]
+# Random suffix for unique naming
+resource "random_string" "suffix" {
+  length  = 4
+  special = false
+  upper   = false
 }
 
+# Local values
 locals {
-  prefix = "databricksdemo${random_string.naming.result}"
-  tags = {
-    Environment = "prod"
-    Owner       = lookup(data.external.me.result, "name", "unknown")
+  environment = "prod"
+  region      = var.region
+  prefix      = "databricks-${local.environment}-${local.region}-${random_string.suffix.result}"
+  
+  common_tags = {
+    Environment = local.environment
+    Region      = local.region
+    Project     = "databricks-platform"
+    ManagedBy   = "terraform"
+    Owner       = var.owner
+    CostCenter  = var.cost_center
+    DR          = "true"  # Mark as DR region
   }
 }
 
 
 # 👉 Use the network module
-module "network" {
-  source              = "../../../modules/network"
-  resource_group_name = var.resource_group_name
-  location            = var.region
-  prefix              = local.prefix
-  tags                = local.tags
+# Resource Group
+resource "azurerm_resource_group" "main" {
+  name     = var.resource_group_name
+  location = var.region
+  tags     = local.common_tags
 }
 
-# 👉 Use the databricks_workspace module
-module "adb_workspace" {
-  source                          = "../../../modules/databricks_workspace"
+# Network module
+module "network" {
+  source              = "../../modules/network"
+  resource_group_name = azurerm_resource_group.main.name
+  location            = azurerm_resource_group.main.location
+  prefix              = local.prefix
+  tags                = local.common_tags
+}
+
+# Databricks workspace module
+module "databricks_workspace" {
+  source                          = "../../modules/databricks_workspace"
   workspace_name                  = "${local.prefix}-workspace"
-  resource_group_name             = var.resource_group_name
-  region                          = var.region
+  resource_group_name             = azurerm_resource_group.main.name
+  region                          = azurerm_resource_group.main.location
   managed_resource_group_name     = "${local.prefix}-managed-rg"
   vnet_id                         = module.network.vnet_id
   public_subnet_name              = module.network.public_subnet_name
   private_subnet_name             = module.network.private_subnet_name
   public_nsg_assoc_id             = module.network.public_nsg_assoc_id
   private_nsg_assoc_id            = module.network.private_nsg_assoc_id
-  tags                            = local.tags
+  databricks_sku                  = var.databricks_sku
+  tags                            = local.common_tags
 }
 
 
-output "databricks_host" {
-  value = "https://${module.adb_workspace.workspace_url}/"
+# Outputs
+output "databricks_workspace_url" {
+  description = "URL of the Databricks workspace"
+  value       = "https://${module.databricks_workspace.workspace_url}"
+}
+
+output "databricks_workspace_id" {
+  description = "ID of the Databricks workspace"
+  value       = module.databricks_workspace.workspace_id
+}
+
+output "resource_group_name" {
+  description = "Name of the resource group"
+  value       = azurerm_resource_group.main.name
+}
+
+output "vnet_id" {
+  description = "ID of the virtual network"
+  value       = module.network.vnet_id
 }

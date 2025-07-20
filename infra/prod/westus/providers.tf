@@ -15,10 +15,9 @@ terraform {
 }
 
 provider "azurerm" {
-  subscription_id = "3be8fc2b-3d84-4501-a6c9-2973f712c20b"
   features {}
 }
 
 provider "databricks" {
-  host = azurerm_databricks_workspace.example.workspace_url
+  host = module.databricks_workspace.workspace_url
 }
